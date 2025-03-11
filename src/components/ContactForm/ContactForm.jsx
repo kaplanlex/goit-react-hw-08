@@ -1,40 +1,70 @@
-import { useDispatch } from "react-redux";
-import { addContact } from "../../redux/contactsOps";
+import * as Yup from 'yup';
 
-import { Formik, Form, Field } from "formik";
-import * as Yup from "yup";
-import styles from "./ContactForm.module.css";
+import { ErrorMessage, Field, Form, Formik } from 'formik';
+import { useDispatch, useSelector } from 'react-redux';
 
-const validationSchema = Yup.object({
-    name: Yup.string().required("Name is required"),
-    number: Yup.string().required("Phone number is required"),
-});
+import { addContact } from '../../redux/contacts/operations.js';
+import { selectAllContacts } from '../../redux/contacts/selectors.js';
+import styles from './ContactForm.module.css';
 
 const ContactForm = () => {
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const contacts = useSelector(selectAllContacts);
 
-    const handleSubmit = (values, { resetForm }) => {
-        dispatch(addContact(values));
-        resetForm();
-    };
+  const initialValues = {
+    name: '',
+    number: '',
+  };
 
-    return (
-        <Formik
-            initialValues={{ name: "", number: "" }}
-            validationSchema={validationSchema}
-            onSubmit={handleSubmit}
-        >
-            {({ errors, touched }) => (
-                <Form className={styles.form}>
-                    <Field className={styles.input} type="text" name="name" placeholder="Enter name" />
-                    {errors.name && touched.name && <div className={styles.error}>{errors.name}</div>}
-                    <Field className={styles.input} type="text" name="number" placeholder="Enter phone" />
-                    {errors.number && touched.number && <div className={styles.error}>{errors.number}</div>}
-                    <button type="submit" className={styles.button}>Add Contact</button>
-                </Form>
-            )}
-        </Formik>
+  const validationSchema = Yup.object({
+    name: Yup.string()
+      .min(3, 'Too short!')
+      .max(50, 'Too long!')
+      .required('Required!'),
+    number: Yup.string()
+      .matches(/^\d{3}-\d{2}-\d{2}$/, 'Format: 123-45-67')
+      .required('Required!'),
+  });
+
+  const handleSubmit = (values, { resetForm }) => {
+    const isExist = contacts.some(
+      contact => contact.name.toLowerCase() === values.name.toLowerCase()
     );
+
+    if (isExist) {
+      alert(`${values.name} is already in contacts.`);
+      return;
+    }
+
+    dispatch(addContact(values));
+    resetForm();
+  };
+
+  return (
+    <div className={styles.formContainer}>
+      <Formik
+        initialValues={initialValues}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+      >
+        <Form className={styles.form}>
+          <label>
+            <p className={styles.text}>Name</p>
+            <Field type="text" name="name" className={styles.input} />
+            <ErrorMessage name="name" component="div" className={styles.error} />
+          </label>
+          <label>
+            <p className={styles.text}>Number</p>
+            <Field type="text" name="number" className={styles.input} />
+            <ErrorMessage name="number" component="div" className={styles.error} />
+          </label>
+          <button type="submit" className={styles.button}>
+            Add Contact
+          </button>
+        </Form>
+      </Formik>
+    </div>
+  );
 };
 
 export default ContactForm;
